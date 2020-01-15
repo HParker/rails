@@ -1573,6 +1573,25 @@ class BasicsTest < ActiveRecord::TestCase
     end
   end
 
+  test "empty queries do not rails if preventing writes" do
+    ActiveRecord::Base.connection_handler.while_preventing_writes do
+      Bird.connection.execute("")
+    end
+  end
+
+  test "whitespace only do not rails if preventing writes" do
+    ActiveRecord::Base.connection_handler.while_preventing_writes do
+      Bird.connection.execute("  ")
+    end
+  end
+
+  test "comments only do not rails if preventing writes" do
+    ActiveRecord::Base.connection_handler.while_preventing_writes do
+      Bird.connection.execute("/* super special query */")
+    end
+  end
+
+
   test "an explain query does not raise if preventing writes" do
     Bird.create!(name: "Bluejay")
 
