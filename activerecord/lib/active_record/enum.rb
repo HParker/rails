@@ -182,7 +182,7 @@ module ActiveRecord
         detect_enum_conflict!(name, "#{name}=")
 
         attr = attribute_alias?(name) ? attribute_alias(name) : name
-        attribute(attr, **default) do |subtype|
+        decorate_attribute_type(attr, :enum) do |subtype|
           EnumType.new(attr, enum_values, subtype)
         end
 

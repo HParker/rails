@@ -406,6 +406,17 @@ class EnumTest < ActiveRecord::TestCase
     end
   end
 
+  test "non-integer enum types should be set correctly" do
+    klass = Class.new(ActiveRecord::Base) do
+      self.table_name = "books"
+      attribute :boolean_status, :integer
+      enum boolean_status: [:proposed, :written]
+    end
+
+    book = klass.create!(status: :written)
+    assert_equal :written, book.boolean_status
+  end
+
   test "validate uniqueness" do
     klass = Class.new(ActiveRecord::Base) do
       def self.name; "Book"; end
