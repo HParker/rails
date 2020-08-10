@@ -9,7 +9,8 @@ module ActiveJob
     # Job arguments
     attr_accessor :arguments
     attr_writer :serialized_arguments
-
+    attr_accessor :keywords
+    attr_writer :serialized_keywords
     # Timestamp when the job should be performed
     attr_accessor :scheduled_at
 
@@ -78,15 +79,20 @@ module ActiveJob
 
     # Creates a new job instance. Takes the arguments that will be
     # passed to the perform method.
-    def initialize(*arguments)
-      @arguments  = arguments
+    def initialize(*arguments, **keywords)
+      puts "IN INITIALIZE"
+      puts caller
+      puts "-"*100
+      puts arguments.inspect
+      puts "IN INITIALIZE"
+      @arguments = arguments
+      @keywords = keywords
       @job_id     = SecureRandom.uuid
       @queue_name = self.class.queue_name
       @priority   = self.class.priority
       @executions = 0
       @exception_executions = {}
     end
-    ruby2_keywords(:initialize) if respond_to?(:ruby2_keywords, true)
 
     # Returns a hash with the job data that can safely be passed to the
     # queuing adapter.
@@ -98,6 +104,7 @@ module ActiveJob
         "queue_name" => queue_name,
         "priority"   => priority,
         "arguments"  => serialize_arguments_if_needed(arguments),
+        "keywords"  => serialize_arguments_if_needed(keywords),
         "executions" => executions,
         "exception_executions" => exception_executions,
         "locale"     => I18n.locale.to_s,
@@ -138,6 +145,7 @@ module ActiveJob
       self.queue_name           = job_data["queue_name"]
       self.priority             = job_data["priority"]
       self.serialized_arguments = job_data["arguments"]
+      self.serialized_keywords  = job_data["keywords"]
       self.executions           = job_data["executions"]
       self.exception_executions = job_data["exception_executions"]
       self.locale               = job_data["locale"] || I18n.locale.to_s
@@ -157,6 +165,7 @@ module ActiveJob
       def deserialize_arguments_if_needed
         if arguments_serialized?
           @arguments = deserialize_arguments(@serialized_arguments)
+          @keywords = deserialize_arguments(@serialized_keywords)
           @serialized_arguments = nil
         end
       end

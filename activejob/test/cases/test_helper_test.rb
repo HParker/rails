@@ -599,6 +599,16 @@ class EnqueuedJobsTest < ActiveJob::TestCase
     end
   end
 
+  def test_assert_enqueued_with_empty_kwargs
+
+    now = DateTime.now
+    args = []
+
+    assert_enqueued_with(job: MultipleKwargsJob, args: args, kwargs: {}) do
+      MultipleKwargsJob.perform_later(**{})
+    end
+  end
+
   def test_assert_enqueued_with_time_with_zone
     now = Time.now.in_time_zone("Tokyo")
     args = [{ argument1: [now] }]

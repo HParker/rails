@@ -386,8 +386,8 @@ module ActiveJob
     #       MyJob.set(wait_until: Date.tomorrow.noon).perform_later
     #     end
     #   end
-    def assert_enqueued_with(job: nil, args: nil, at: nil, queue: nil, &block)
-      expected = { job: job, args: args, at: at, queue: queue }.compact
+    def assert_enqueued_with(job: nil, args: nil, kwargs: nil, at: nil, queue: nil, &block)
+      expected = { job: job, args: args, kwargs: kwargs, at: at, queue: queue }.compact
       expected_args = prepare_args_for_assertion(expected)
       potential_matches = []
 
@@ -672,6 +672,7 @@ module ActiveJob
             arguments[:at] = ->(at) { at_range.cover?(at) }
           end
           arguments[:args] = round_time_arguments(arguments[:args]) if arguments[:args]
+          arguments[:kwargs] = round_time_arguments(arguments[:kwargs]) if arguments[:kwargs]
         end
       end
 
