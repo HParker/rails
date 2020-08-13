@@ -628,6 +628,24 @@ class InverseBelongsToTests < ActiveRecord::TestCase
     end
   end
 
+  def test_unscope_does_not_set_inverse_when_incorrect
+    i = interests(:trainspotting)
+    m = i.man
+    created_man = Man.create(name: "wrong man")
+    iz = created_man.interests.or(m.interests).detect { |_iz| i.id == _iz.id }
+
+    assert_equal m, iz.man
+  end
+
+  def test_or_does_not_set_inverse_when_incorrect
+    i = interests(:trainspotting)
+    m = i.man
+    created_man = Man.create(name: "wrong man")
+    iz = created_man.interests.unscope(:where).detect { |_iz| i.id == _iz.id }
+
+    assert_equal m, iz.man
+  end
+
   def test_with_has_many_inversing_does_not_trigger_association_callbacks_on_set_when_the_inverse_is_a_has_many
     with_has_many_inversing do
       man = interests(:trainspotting).man_with_callbacks
