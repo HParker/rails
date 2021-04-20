@@ -41,8 +41,13 @@ module ActionView
 
       # Create a dependency tree for template named +name+.
       def tree(name, finder, partial = false, seen = {})
-        logical_name = name.gsub(%r|/_|, "/")
-        interpolated = name.include?("#")
+        if name.is_a?(RenderCall)
+          logical_name = name.virtual_path.gsub(%r|/_|, "/")
+          interpolated = name.virtual_path.include?("#")
+        else
+          logical_name = name.gsub(%r|/_|, "/")
+          interpolated = name.include?("#")
+        end
 
         path = TemplatePath.parse(name)
 
@@ -53,7 +58,13 @@ module ActionView
             node = seen[template.identifier] = Node.create(name, logical_name, template, partial)
 
             deps = DependencyTracker.find_dependencies(name, template, finder.view_paths)
-            deps.uniq { |n| n.gsub(%r|/_|, "/") }.each do |dep_file|
+            deps.map { |n|
+              if n.is_a?(RenderCall)
+                n.virtual_path.gsub(%r|/_|, "/")
+              else
+                n.gsub(%r|/_|, "/")
+              end
+            }.uniq.each do |dep_file|
               node.children << tree(dep_file, finder, true, seen)
             end
             node
