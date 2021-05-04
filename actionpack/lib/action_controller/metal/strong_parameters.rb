@@ -229,6 +229,9 @@ module ActionController
     #   to_s()
     #
     # Returns the content of the parameters as a string.
+    def to_s
+      raise "attempted to convert action controller params to string, don't do that"
+    end
 
     ##
     # :method: value?
@@ -246,7 +249,7 @@ module ActionController
     #
     # Returns a new array of the values of the parameters.
     delegate :keys, :key?, :has_key?, :member?, :values, :has_value?, :value?, :empty?, :include?,
-      :as_json, :to_s, :each_key, to: :@parameters
+      :as_json, :each_key, to: :@parameters
 
     # By default, never raise an UnpermittedParameters exception if these
     # params are present. The default includes both 'controller' and 'action'
