@@ -229,6 +229,14 @@ module ActionController
     #   to_s()
     #
     # Returns the content of the parameters as a string.
+    def to_s
+      ActiveSupport::Deprecation.warn(<<~MSG)
+        Calling to_s on an unpermitted parameter prints \"#{@parameters}\" which is usually unintended
+        instead consider first calling `params.permit(:key)` if you want to raise when the key is a hash or `params.require(:key)[:key]` if you want nil when the key is a hash or missing.
+        In Rails 7.1, `to_s` on an unpermitted parameter will raise an error.
+      MSG
+      @parameters.to_s
+    end
 
     ##
     # :method: value?
@@ -246,7 +254,7 @@ module ActionController
     #
     # Returns a new array of the values of the parameters.
     delegate :keys, :key?, :has_key?, :member?, :values, :has_value?, :value?, :empty?, :include?,
-      :as_json, :to_s, :each_key, to: :@parameters
+      :as_json, :each_key, to: :@parameters
 
     # By default, never raise an UnpermittedParameters exception if these
     # params are present. The default includes both 'controller' and 'action'
