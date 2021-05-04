@@ -164,12 +164,10 @@ module ActionView
     extend self
 
     def parse_render_nodes(code)
-      puts "parse_render_nodes CODE: '#{code}'"
       parser = RenderCallParser.new(code)
       parser.parse
 
       parser.render_calls.group_by(&:first).collect do |method, nodes|
-        puts "METHOD #{method}"
         [ method.to_sym, nodes.collect { |v| v[1] } ]
       end.to_h
     end
@@ -185,9 +183,7 @@ module ActionView
     end
 
     def render_calls
-      puts "RENDER CALLS '#{@code}'"
       render_nodes = @parser.parse_render_nodes(@code)
-      puts "NODES: #{render_nodes.to_a.inspect}"
       render_nodes.map do |method, nodes|
         parse_method = case method
                        when :layout
@@ -195,10 +191,6 @@ module ActionView
                        else
                          :parse_render
                        end
-        puts "-"*199
-        puts "RENDER_CALLS: #{method}"
-        puts "-"*199
-
         nodes.map { |n| send(parse_method, n) }
       end.flatten.compact
     end
@@ -432,10 +424,12 @@ module ActionView
     end
 
     class RipperTracker
+      BLAH_EXPLICIT_DEPENDENCY = /# Template Dependency: (\S+)/
       def self.call(name, template, view_paths = nil)
         if template.source.include?("render")
+          BLAH_EXPLICIT_DEPENDENCY
           compiled_source = template.handler.call(template, template.source)
-          RenderParser.new(compiled_source).render_calls
+          RenderParser.new(compiled_source).render_calls + explicit_dependencies(template.source)
         else
           []
         end
@@ -443,6 +437,10 @@ module ActionView
 
       def self.supports_view_paths? # :nodoc:
         true
+      end
+
+      def self.explicit_dependencies(source)
+        dependencies = source.scan(BLAH_EXPLICIT_DEPENDENCY).flatten.uniq
       end
     end
 

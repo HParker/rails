@@ -140,7 +140,7 @@ class TemplateDigestorTest < ActionView::TestCase
   end
 
   def test_nested_template_deps
-    nested_deps = ["messages/header", { "comments/comments" => ["comments/comment"] }, "messages/actions/move", "events/event", "messages/something_missing", "messages/something_missing_1", "messages/message", "messages/form"]
+    nested_deps = ["_header", { "comments/comments" => ["comments/comment"] }, "messages/actions/move", "events/event", "messages/message"]
     assert_equal nested_deps, nested_dependencies("messages/show")
   end
 
