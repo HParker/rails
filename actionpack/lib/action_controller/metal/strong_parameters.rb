@@ -941,12 +941,23 @@ module ActionController
       def convert_value_to_parameters(value)
         case value
         when Array
-          return value if converted_arrays.member?(value)
-          converted = value.map { |_| convert_value_to_parameters(_) }
-          converted_arrays << converted
-          converted
+          ActiveSupport::Deprecation.warn(<<~MSG)
+            In rails 7.1 array paramters will not be accessable via square brackets
+            They must instead be accessed by either being permitted or required
+          MSG
+          return nil
+          # return value if converted_arrays.member?(value)
+
+          # converted = value.map { |_| convert_value_to_parameters(_) }
+          # converted_arrays << converted
+          # converted
         when Hash
-          self.class.new(value)
+          ActiveSupport::Deprecation.warn(<<~MSG)
+            In rails 7.1 hash paramters will not be accessable via square brackets
+            They must instead be accessed by either being permitted or required
+          MSG
+          return nil
+          # self.class.new(value)
         else
           value
         end
