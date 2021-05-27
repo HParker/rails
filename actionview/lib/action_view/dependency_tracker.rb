@@ -36,11 +36,35 @@ module ActionView
       def argument_nodes
         raise unless fcall?
         return [] if self[1].nil?
-        self[1][0...-1]
+        if self[1].last == false || self[1].last.type == :vcall
+          self[1][0...-1]
+        else
+          self[1][0..-1]
+        end
       end
 
       def string?
         type == :string_literal
+      end
+
+      def variable_reference?
+        type == :var_ref
+      end
+
+      def vcall?
+        type == :vcall
+      end
+
+      def call?
+        type == :call
+      end
+
+      def variable_name
+        self[0][0]
+      end
+
+      def call_method_name
+        self.last.first
       end
 
       def to_string
@@ -224,7 +248,7 @@ module ActionView
 
     def parse_render(node)
       node = node.argument_nodes
-      if (node.length == 1 || node.length == 2) && node[0].string?
+      if (node.length == 1 || node.length == 2) && !node[0].hash?
         if node.length == 1
           options = normalize_args(node[0], nil)
         elsif node.length == 2
@@ -290,7 +314,24 @@ module ActionView
       end
 
       render_type = (keys & render_type_keys)[0]
-      template = parse_str(options_hash[render_type])
+
+      node = options_hash[render_type]
+      if node.string?
+        template = node.to_string
+      else
+        if node.variable_reference?
+          dependency = node.variable_name.sub(/\A(?:\$|@{1,2})/, "")
+        elsif node.vcall?
+          dependency = node.variable_name
+        elsif node.call?
+          dependency = node.call_method_name
+        else
+          return
+        end
+        object_template = true
+        template = "#{dependency.pluralize}/#{dependency.singularize}"
+      end
+
       return unless template
 
       if options_hash.key?(:locals)
@@ -312,7 +353,7 @@ module ActionView
         renders << RenderCall.new(virtual_path, locals_keys.dup)
       end
 
-      if options_hash.key?(:object) || options_hash.key?(:collection)
+      if options_hash.key?(:object) || options_hash.key?(:collection) || object_template
         return nil if options_hash.key?(:object) && options_hash.key?(:collection)
         return nil unless options_hash.key?(:partial)
 
@@ -424,12 +465,11 @@ module ActionView
     end
 
     class RipperTracker
-      BLAH_EXPLICIT_DEPENDENCY = /# Template Dependency: (\S+)/
+      EXPLICIT_DEPENDENCY = /# Template Dependency: (\S+)/
       def self.call(name, template, view_paths = nil)
-        if template.source.include?("render")
-          BLAH_EXPLICIT_DEPENDENCY
+        if template.source.include?("render") || true
           compiled_source = template.handler.call(template, template.source)
-          RenderParser.new(compiled_source).render_calls + explicit_dependencies(template.source)
+          RenderParser.new(compiled_source).render_calls + explicit_dependencies(template.source, view_paths)
         else
           []
         end
@@ -439,8 +479,24 @@ module ActionView
         true
       end
 
-      def self.explicit_dependencies(source)
-        dependencies = source.scan(BLAH_EXPLICIT_DEPENDENCY).flatten.uniq
+      def self.explicit_dependencies(source, view_paths)
+        dependencies = source.scan(EXPLICIT_DEPENDENCY).flatten.uniq
+
+        wildcards, explicits = dependencies.partition { |dependency| dependency.end_with?("/*") }
+
+        (explicits + resolve_directories(wildcards, view_paths)).uniq
+      end
+
+      def self.resolve_directories(wildcard_dependencies, view_paths)
+        return [] unless view_paths
+        return [] if wildcard_dependencies.empty?
+
+        # Remove trailing "/*"
+        prefixes = wildcard_dependencies.map { |query| query[0..-3] }
+
+        view_paths.flat_map(&:all_template_paths).uniq.filter_map { |path|
+          path.to_s if prefixes.include?(path.prefix)
+        }.sort
       end
     end
 
