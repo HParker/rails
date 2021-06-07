@@ -183,6 +183,10 @@ module ActionView
       def on_arg_paren(content)
         content
       end
+
+      def on_paren(content)
+        content
+      end
     end
 
     extend self
@@ -200,7 +204,8 @@ module ActionView
   RenderCall = Struct.new(:virtual_path, :locals_keys)
 
   class RenderParser
-    def initialize(code, parser: RipperASTParser, from_controller: false)
+    def initialize(name, code, parser: RipperASTParser, from_controller: false)
+      @name = name
       @code = code
       @parser = parser
       @from_controller = from_controller
@@ -220,6 +225,18 @@ module ActionView
     end
 
     private
+
+    def directory
+      @name.split("/")[0..-2].join("/")
+    end
+
+    def resolve_path_directory(path)
+      if path.match?("/")
+        path
+      else
+        "#{directory}/#{path.singularize}"
+      end
+    end
 
     # Convert
     #   render("foo", ...)
@@ -317,7 +334,11 @@ module ActionView
 
       node = options_hash[render_type]
       if node.string?
-        template = node.to_string
+        if @from_controller
+          template = node.to_string
+        else
+          template = resolve_path_directory(node.to_string)
+        end
       else
         if node.variable_reference?
           dependency = node.variable_name.sub(/\A(?:\$|@{1,2})/, "")
@@ -469,7 +490,7 @@ module ActionView
       def self.call(name, template, view_paths = nil)
         if template.source.include?("render") || true
           compiled_source = template.handler.call(template, template.source)
-          RenderParser.new(compiled_source).render_calls + explicit_dependencies(template.source, view_paths)
+          RenderParser.new(name, compiled_source).render_calls + explicit_dependencies(template.source, view_paths)
         else
           []
         end
