@@ -182,7 +182,7 @@ class RipperTrackerTest < Minitest::Test
   end
 
   def test_finds_dependencies_with_special_characters
-    template = FakeTemplate.new("<%= render @pokémon, partial: 'ピカチュウ' %>", :erb)
+    template = FakeTemplate.new("<%= render partial: 'ピカチュウ', object: @pokémon %>", :erb)
     tracker = make_tracker("special/_characters", template)
 
     dependencies = tracker.dependencies.map { |d| d.virtual_path.gsub(%r|/_|, "/") }.sort

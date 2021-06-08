@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "ripper"
 
 module ActionView
@@ -15,8 +17,8 @@ module ActionView
       end
 
       def inspect
-        typeinfo = type && type != :list ? ':' + type.to_s + ', ' : ''
-        's(' + typeinfo + map(&:inspect).join(", ") + ')'
+        typeinfo = type && type != :list ? ":" + type.to_s + ", " : ""
+        "s(" + typeinfo + map(&:inspect).join(", ") + ")"
       end
 
       def fcall?
@@ -112,13 +114,13 @@ module ActionView
     class NodeParser < ::Ripper
       PARSER_EVENTS.each do |event|
         arity = PARSER_EVENT_TABLE[event]
-        if /_new\z/ =~ event.to_s && arity == 0
+        if arity == 0 && event.to_s.end_with?("_new")
           module_eval(<<-eof, __FILE__, __LINE__ + 1)
             def on_#{event}(*args)
               Node.new(:list, args, lineno: lineno(), column: column())
             end
           eof
-        elsif /_add(_.+)?\z/ =~ event.to_s
+        elsif event.to_s.match?(/_add(_.+)?\z/)
           module_eval(<<-eof, __FILE__, __LINE__ + 1)
             begin; undef on_#{event}; rescue NameError; end
             def on_#{event}(list, item)
@@ -157,32 +159,31 @@ module ActionView
       end
 
       private
-
-      def on_fcall(name, *args)
-        on_render_call(super)
-      end
-
-      def on_command(name, *args)
-        on_render_call(super)
-      end
-
-      def on_render_call(node)
-        METHODS_TO_PARSE.each do |method|
-          if node.fcall_named?(method)
-            @render_calls << [method, node]
-            return node
-          end
+        def on_fcall(name, *args)
+          on_render_call(super)
         end
-        node
-      end
 
-      def on_arg_paren(content)
-        content
-      end
+        def on_command(name, *args)
+          on_render_call(super)
+        end
 
-      def on_paren(content)
-        content
-      end
+        def on_render_call(node)
+          METHODS_TO_PARSE.each do |method|
+            if node.fcall_named?(method)
+              @render_calls << [method, node]
+              return node
+            end
+          end
+          node
+        end
+
+        def on_arg_paren(content)
+          content
+        end
+
+        def on_paren(content)
+          content
+        end
     end
 
     extend self
