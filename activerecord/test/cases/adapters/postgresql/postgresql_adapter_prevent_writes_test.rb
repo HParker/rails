@@ -94,6 +94,13 @@ module ActiveRecord
         end
       end
 
+      def test_doesnt_error_when_a_healthcheck_query_is_called_while_preventing_writes
+        ActiveRecord::Base.while_preventing_writes do
+          assert_queries(1) { @connection.execute("") }
+          assert_queries(1) { @connection.execute("/*application:ruby_explorer,deployed_to:development,server:Computer.Home*/") }
+        end
+      end
+
       private
         def with_example_table(definition = "id serial primary key, number integer, data character varying(255)", &block)
           super(@connection, "ex", definition, &block)
