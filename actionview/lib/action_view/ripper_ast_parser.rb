@@ -67,8 +67,6 @@ module ActionView
 
       def to_string
         raise unless string?
-        raise "fixme" unless self[0].type == :string_content
-        raise "fixme" unless self[0][0].type == :@tstring_content
         self[0][0][0]
       end
 
@@ -83,8 +81,6 @@ module ActionView
           {}
         elsif type == :hash && self[0].type == :assoclist_from_args
           hash_from_body(self[0][0])
-        else
-          raise "not a hash? #{inspect}"
         end
       end
 
