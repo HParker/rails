@@ -5,8 +5,6 @@ require "action_view/path_set"
 require "action_view/ripper_ast_parser"
 
 module ActionView
-  RenderCall = Struct.new(:virtual_path, :locals_keys)
-
   class RenderParser
     def initialize(name, code, parser: RipperASTParser, from_controller: false)
       @name = name
@@ -91,8 +89,7 @@ module ActionView
         template = parse_str(node.argument_nodes[0])
         return nil unless template
 
-        virtual_path = layout_to_virtual_path(template)
-        RenderCall.new(virtual_path, [])
+        layout_to_virtual_path(template)
       end
 
       def parse_hash(node)
@@ -158,22 +155,9 @@ module ActionView
 
         return unless template
 
-        if options_hash.key?(:locals)
-          locals = options_hash[:locals]
-          parsed_locals = parse_hash(locals)
-          return nil unless parsed_locals
-          locals_keys = parsed_locals.keys.map do |local|
-            return nil unless local.symbol?
-            local.to_symbol
-          end
-        else
-          locals_keys = []
-        end
-
         if spacer_template = render_template_with_spacer?(options_hash)
           virtual_path = partial_to_virtual_path(:partial, spacer_template)
-          # Locals keys should not include collection keys
-          renders << RenderCall.new(virtual_path, locals_keys.dup)
+          renders << virtual_path
         end
 
         if options_hash.key?(:object) || options_hash.key?(:collection) || object_template
@@ -185,18 +169,10 @@ module ActionView
           elsif File.basename(template) =~ /\A_?(.*?)(?:\.\w+)*\z/
             $1
           end
-
-          return nil unless as
-
-          locals_keys << as.to_sym
-          if options_hash.key?(:collection)
-            locals_keys << :"#{as}_counter"
-            locals_keys << :"#{as}_iteration"
-          end
         end
 
         virtual_path = partial_to_virtual_path(render_type, template)
-        renders << RenderCall.new(virtual_path, locals_keys)
+        renders << virtual_path
 
         # Support for rendering multiple templates (i.e. a partial with a layout)
         if layout_template = render_template_with_layout?(render_type, options_hash)
@@ -213,7 +189,7 @@ module ActionView
             partial_to_virtual_path(:layout, layout_template)
           end
 
-          renders << RenderCall.new(virtual_path, locals_keys)
+          renders << virtual_path
         end
 
         renders
@@ -298,8 +274,7 @@ module ActionView
 
       def dependencies
         if template.source.include?("render") || true
-          compiled_source = template.handler.call(template, template.source)
-          RenderParser.new(name, compiled_source).render_calls + explicit_dependencies(template.source, view_paths)
+          render_dependencies + explicit_dependencies
         else
           []
         end
@@ -313,8 +288,14 @@ module ActionView
       private :template, :name, :view_paths
 
       private
-        def explicit_dependencies(source, view_paths)
-          dependencies = source.scan(EXPLICIT_DEPENDENCY).flatten.uniq
+        def render_dependencies
+          compiled_source = template.handler.call(template, template.source)
+          RenderParser.new(@name, compiled_source).render_calls.map do |render_call|
+            render_call.gsub(%r|/_|, "/")
+          end
+        end
+        def explicit_dependencies
+          dependencies = template.source.scan(EXPLICIT_DEPENDENCY).flatten.uniq
 
           wildcards, explicits = dependencies.partition { |dependency| dependency.end_with?("/*") }
 
