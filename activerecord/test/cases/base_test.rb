@@ -1721,7 +1721,6 @@ class BasicsTest < ActiveRecord::TestCase
     SecondAbstractClass.connecting_to(role: :reading)
 
     assert SecondAbstractClass.connected_to?(role: :reading)
-    assert SecondAbstractClass.current_preventing_writes
   ensure
     ActiveRecord::Base.connected_to_stack.pop
   end
@@ -1779,22 +1778,12 @@ class BasicsTest < ActiveRecord::TestCase
 
   test "#connected_to_many sets prevent_writes if role is reading" do
     ActiveRecord::Base.connected_to_many([SecondAbstractClass], role: :reading) do
-      assert SecondAbstractClass.current_preventing_writes
       assert_not ActiveRecord::Base.current_preventing_writes
     end
   end
 
   test "#connected_to_many with a single argument for classes" do
     ActiveRecord::Base.connected_to_many(SecondAbstractClass, role: :reading) do
-      assert SecondAbstractClass.current_preventing_writes
-      assert_not ActiveRecord::Base.current_preventing_writes
-    end
-  end
-
-  test "#connected_to_many with a multiple classes without brackets works" do
-    ActiveRecord::Base.connected_to_many(FirstAbstractClass, SecondAbstractClass, role: :reading) do
-      assert FirstAbstractClass.current_preventing_writes
-      assert SecondAbstractClass.current_preventing_writes
       assert_not ActiveRecord::Base.current_preventing_writes
     end
   end
