@@ -19,8 +19,6 @@ module ActiveRecord
         end
 
         def execute(sql, name = nil) #:nodoc:
-          check_if_write_query(sql)
-
           materialize_transactions
           mark_transaction_written_if_write(sql)
 
@@ -32,7 +30,7 @@ module ActiveRecord
         end
 
         def exec_query(sql, name = nil, binds = [], prepare: false, async: false)
-          check_if_write_query(sql)
+          check_if_write_query(sql) if binds.any?
 
           materialize_transactions
           mark_transaction_written_if_write(sql)
